@@ -295,17 +295,6 @@ async function listRequirements(filter = {}) {
 }
 
 /**
- * Calculate progress percentage for a requirement
- */
-function calculateProgress(requirement) {
-  const phases = requirement.progress?.phases || [];
-  if (phases.length === 0) return 0;
-
-  const completedCount = phases.filter(p => p.status === 'completed').length;
-  return Math.round((completedCount / phases.length) * 100);
-}
-
-/**
  * Update requirement progress with enhanced logging
  * @param {string} id - Requirement ID
  * @param {string} phase - Phase name
@@ -363,8 +352,6 @@ async function updateRequirementProgress(id, phase, event, details = {}) {
         requirement.currentPhase = phase;
       } else if (event === 'phase_completed') {
         phaseObj.status = 'completed';
-        // Calculate and store progress percentage
-        requirement.progressPercentage = calculateProgress(requirement);
       } else if (event === 'phase_blocked') {
         phaseObj.status = 'blocked';
       }
@@ -534,8 +521,6 @@ async function updateIndex() {
       try {
         const content = await fsPromises.readFile(path.join(reqDir, file), 'utf-8');
         const req = JSON.parse(content);
-        // Calculate progress percentage
-        const progressPercentage = calculateProgress(req);
         // Include summary for index
         requirements.push({
           id: req.id,
@@ -543,9 +528,6 @@ async function updateIndex() {
           type: req.type,
           status: req.status,
           currentPhase: req.currentPhase,
-          progressPercentage,
-          phasesTotal: req.progress?.phases?.length || 0,
-          phasesCompleted: req.progress?.phases?.filter(p => p.status === 'completed').length || 0,
           createdAt: req.createdAt,
           updatedAt: req.updatedAt,
           git: req.git
