@@ -338,8 +338,11 @@ async function updateRequirementProgress(id, phase, event, details = {}) {
 
 /**
  * Advance to the next phase
+ * @param {string} id - Requirement ID
+ * @param {boolean} forceAdvance - If true, ignore manual mode and advance anyway
+ * @returns {Object} - { requirement, needsManualConfirmation, nextPhase }
  */
-async function advancePhase(id) {
+async function advancePhase(id, forceAdvance = false) {
   const requirement = await getRequirement(id);
   if (!requirement) {
     throw new Error(`Requirement ${id} not found`);
@@ -366,8 +369,29 @@ async function advancePhase(id) {
     details: { phase: currentPhaseName }
   });
 
-  // Move to next phase
+  // Check if this phase requires manual confirmation before advancing
   const nextIndex = currentIndex + 1;
+  const needsManualConfirmation = !forceAdvance &&
+    currentPhase.mode === 'manual' &&
+    nextIndex < phases.length;
+
+  if (needsManualConfirmation) {
+    // For manual mode phases, do NOT auto-advance - user must confirm
+    requirement.updatedAt = now;
+
+    // Save updated requirement (current phase completed)
+    const root = getRequirementsRoot();
+    const reqPath = path.join(root, 'requirements', `${id}.json`);
+    await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
+
+    return {
+      requirement,
+      needsManualConfirmation: true,
+      nextPhase: phases[nextIndex]?.name || null
+    };
+  }
+
+  // Move to next phase (auto mode or force advance)
   if (nextIndex < phases.length) {
     const nextPhase = phases[nextIndex];
     nextPhase.status = 'in_progress';
@@ -391,7 +415,11 @@ async function advancePhase(id) {
   const reqPath = path.join(root, 'requirements', `${id}.json`);
   await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
 
-  return requirement;
+  return {
+    requirement,
+    needsManualConfirmation: false,
+    nextPhase: nextIndex < phases.length ? phases[nextIndex].name : null
+  };
 }
 
 /**
