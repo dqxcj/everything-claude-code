@@ -2,6 +2,7 @@
 set -e
 
 REQUIREMENTS_DIR="$HOME/.claude/requirements"
+HOOKS_JSON="$HOME/.claude/hooks/hooks.json"
 
 echo "Installing Requirement Progress Tracker..."
 
@@ -28,13 +29,29 @@ cp commands/continue.md "$HOME/.claude/commands/"
 # 复制安装脚本到 ~/.claude/scripts/
 cp install.sh "$HOME/.claude/scripts/rpt-install.sh"
 
-echo "Requirement Progress Tracker installed!"
+# 自动注册 Stop hook
+if [ -f "$HOOKS_JSON" ]; then
+    # 检查是否已经添加过
+    if grep -q "update-progress-hook.js" "$HOOKS_JSON"; then
+        echo "Hook already registered, skipping..."
+    else
+        # 使用 jq 添加 hook（如果可用）
+        if command -v jq &> /dev/null; then
+            TMP_FILE=$(mktemp)
+            jq '.hooks.Stop[0].hooks += [{
+                "type": "command",
+                "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/update-progress-hook.js\"",
+                "async": true,
+                "timeout": 10
+            }]' "$HOOKS_JSON" > "$TMP_FILE" && mv "$TMP_FILE" "$HOOKS_JSON"
+            echo "Added progress tracking hook to hooks.json"
+        else
+            echo "jq not found, please manually add the hook to hooks/hooks.json"
+        fi
+    fi
+else
+    echo "hooks.json not found at $HOOKS_JSON"
+fi
+
 echo ""
-echo "Please add the following to hooks/hooks.json to enable progress tracking:"
-echo '{
-  "matcher": "*",
-  "hooks": [{
-    "type": "command",
-    "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hooks/update-progress-hook.js\""
-  }]
-}'
+echo "Requirement Progress Tracker installed!"
