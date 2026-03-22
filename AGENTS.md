@@ -58,6 +58,25 @@ Use agents proactively without user prompt:
 
 Use parallel execution for independent operations — launch multiple agents simultaneously.
 
+## 需求进度管理
+
+主 agent 还管理需求进度：
+
+### 自动进度追踪
+- 记住当前需求和工作流阶段
+- 会话结束时记录进度到 `~/.claude/requirements/`
+- 重启时从 index.json 恢复状态
+
+### 工作流执行
+- 将当前阶段匹配到相应的 agent/command/skill
+- 对 "auto" 模式的阶段自动推进
+- 对 "manual" 模式的阶段等待用户"继续"
+
+### 会话恢复
+- 读取 index.json 查找活跃需求
+- 按 git branch/localPath 匹配需求
+- 询问用户确认继续哪个需求
+
 ## Security Guidelines
 
 **Before ANY commit:**
