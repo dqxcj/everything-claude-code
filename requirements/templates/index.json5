@@ -1,0 +1,10 @@
+{
+  // 版本号，当前为 "1.0"
+  version: "1.0",
+
+  // 最后更新时间，ISO 8601 格式
+  lastUpdated: "{{lastUpdated}}",
+
+  // 需求列表，按创建时间倒序排列
+  requirements: []
+}
