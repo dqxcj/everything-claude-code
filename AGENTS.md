@@ -62,15 +62,24 @@ Use parallel execution for independent operations — launch multiple agents sim
 
 主 agent 还管理需求进度：
 
-### 自动进度追踪
-- 记住当前需求和工作流阶段
-- 会话结束时记录进度到 `~/.claude/requirements/`
-- 重启时从 index.json 恢复状态
+### 需求自动创建
+**当用户描述一个新需求时（包括但不限于）：**
+- "我想开发个xxx"
+- "帮我实现xxx功能"
+- "添加一个新的xxx"
+- "我要做xxx项目"
+
+**必须先执行 `/requirement-create <需求描述>` 创建需求**，然后再进行规划或其他工作。
 
 ### 工作流执行
 - 将当前阶段匹配到相应的 agent/command/skill
 - 对 "auto" 模式的阶段自动推进
 - 对 "manual" 模式的阶段等待用户"继续"
+
+### 进度追踪
+- 记住当前需求和工作流阶段
+- 会话结束时记录进度到 `~/.claude/requirements/`
+- 重启时从 index.json 恢复状态
 
 ### 会话恢复
 - 读取 index.json 查找活跃需求

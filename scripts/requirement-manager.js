@@ -295,7 +295,16 @@ async function listRequirements(filter = {}) {
 }
 
 /**
- * Update requirement progress
+ * Update requirement progress with enhanced logging
+ * @param {string} id - Requirement ID
+ * @param {string} phase - Phase name
+ * @param {string} event - Event type (phase_entered, phase_completed, phase_blocked, user_message, decision, artifact_created)
+ * @param {Object} details - Additional details including:
+ *   - summary: Brief description of what happened (for all events)
+ *   - decisions: Array of key decisions made
+ *   - artifacts: Array of artifacts created/modified
+ *   - nextSteps: Description of next steps
+ *   - messages: Array of user message summaries (for user_message events)
  */
 async function updateRequirementProgress(id, phase, event, details = {}) {
   const requirement = await getRequirement(id);
@@ -305,12 +314,33 @@ async function updateRequirementProgress(id, phase, event, details = {}) {
 
   const now = new Date().toISOString();
 
-  // Add progress log entry
-  requirement.progressLog.push({
+  // Build enhanced log entry
+  const logEntry = {
     event,
     timestamp: now,
-    details: { phase, ...details }
-  });
+    phase,
+    summary: details.summary || '',
+    details: {}
+  };
+
+  // Add optional fields if present
+  if (details.decisions && details.decisions.length > 0) {
+    logEntry.details.decisions = details.decisions;
+  }
+  if (details.artifacts && details.artifacts.length > 0) {
+    logEntry.details.artifacts = details.artifacts;
+  }
+  if (details.nextSteps) {
+    logEntry.details.nextSteps = details.nextSteps;
+  }
+  if (details.messages && details.messages.length > 0) {
+    logEntry.details.messages = details.messages;
+  }
+  if (details.error) {
+    logEntry.details.error = details.error;
+  }
+
+  requirement.progressLog.push(logEntry);
   requirement.updatedAt = now;
 
   // Update phase status if specified
@@ -333,13 +363,19 @@ async function updateRequirementProgress(id, phase, event, details = {}) {
   const reqPath = path.join(root, 'requirements', `${id}.json`);
   await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
 
+  // Update index with progress info
+  await updateIndex();
+
   return requirement;
 }
 
 /**
  * Advance to the next phase
+ * @param {string} id - Requirement ID
+ * @param {boolean} forceAdvance - If true, ignore manual mode and advance anyway
+ * @returns {Object} - { requirement, needsManualConfirmation, nextPhase }
  */
-async function advancePhase(id) {
+async function advancePhase(id, forceAdvance = false) {
   const requirement = await getRequirement(id);
   if (!requirement) {
     throw new Error(`Requirement ${id} not found`);
@@ -366,8 +402,32 @@ async function advancePhase(id) {
     details: { phase: currentPhaseName }
   });
 
-  // Move to next phase
+  // Check if this phase requires manual confirmation before advancing
   const nextIndex = currentIndex + 1;
+  const needsManualConfirmation = !forceAdvance &&
+    currentPhase.mode === 'manual' &&
+    nextIndex < phases.length;
+
+  if (needsManualConfirmation) {
+    // For manual mode phases, do NOT auto-advance - user must confirm
+    requirement.updatedAt = now;
+
+    // Save updated requirement (current phase completed)
+    const root = getRequirementsRoot();
+    const reqPath = path.join(root, 'requirements', `${id}.json`);
+    await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
+
+    // Update index to reflect latest status and progress
+    await updateIndex();
+
+    return {
+      requirement,
+      needsManualConfirmation: true,
+      nextPhase: phases[nextIndex]?.name || null
+    };
+  }
+
+  // Move to next phase (auto mode or force advance)
   if (nextIndex < phases.length) {
     const nextPhase = phases[nextIndex];
     nextPhase.status = 'in_progress';
@@ -391,7 +451,14 @@ async function advancePhase(id) {
   const reqPath = path.join(root, 'requirements', `${id}.json`);
   await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
 
-  return requirement;
+  // Update index to reflect latest status and progress
+  await updateIndex();
+
+  return {
+    requirement,
+    needsManualConfirmation: false,
+    nextPhase: nextIndex < phases.length ? phases[nextIndex].name : null
+  };
 }
 
 /**
