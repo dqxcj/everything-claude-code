@@ -1,0 +1,68 @@
+{
+  // Requirement Progress Tracker 配置
+
+  // 版本
+  version: "1.0",
+
+  // 需求存储根目录
+  requirementsRoot: "~/.claude/requirements",
+
+  // 工作流定义
+  workflows: {
+    micro: {
+      phases: ["implement", "verify", "commit"]
+    },
+    small: {
+      phases: ["plan", "test-first", "implement", "review", "commit"]
+    },
+    medium: {
+      phases: ["plan", "design", "implement", "test", "review", "verify", "commit"]
+    },
+    large: {
+      phases: ["plan", "design", "implement", "test", "review", "security", "e2e", "verify", "commit"]
+    },
+    "extra-large": {
+      phases: ["research", "ideation", "plan", "design", "implement", "test", "review", "security", "e2e", "optimize", "verify", "commit"]
+    },
+    continuous: {
+      phases: ["loop"]
+    }
+  },
+
+  // 自动推进的阶段（mode: auto）
+  autoPhases: {
+    micro: ["implement", "commit"],
+    small: ["test-first", "implement", "commit"],
+    medium: ["design", "implement", "test", "verify", "commit"],
+    large: ["design", "implement", "test", "e2e", "verify", "commit"],
+    "extra-large": ["design", "implement", "test", "e2e", "optimize", "verify", "commit"],
+    continuous: ["loop"]
+  },
+
+  // 需要手动确认的阶段（mode: manual）
+  manualPhases: {
+    micro: ["verify"],
+    small: ["plan", "review"],
+    medium: ["plan", "review"],
+    large: ["plan", "review", "security"],
+    "extra-large": ["research", "ideation", "plan", "review", "security"],
+    continuous: []
+  },
+
+  // 进度日志事件类型
+  logEventTypes: [
+    "created",
+    "phase_entered",
+    "phase_completed",
+    "phase_blocked",
+    "user_confirmed",
+    "auto_advanced",
+    "note"
+  ],
+
+  // 需求状态
+  statuses: ["pending", "in_progress", "completed", "blocked", "cancelled"],
+
+  // 阶段状态
+  phaseStatuses: ["pending", "in_progress", "completed", "blocked"]
+}

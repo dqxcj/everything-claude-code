@@ -1,0 +1,77 @@
+{
+  // ========== 基础信息 ==========
+
+  // 需求 ID，格式：req-{年月日時分秒}，如 req-20260322-143052
+  id: "{{id}}",
+
+  // 需求名称，简短描述（不超过 50 字符）
+  name: "",
+
+  // 需求类型，取值范围：
+  // - "micro"：微需求（修复 typo、小改动）
+  // - "small"：小需求（单文件功能、TDD 开发）
+  // - "medium"：普通需求（标准功能开发）
+  // - "large"：大需求（多组件、复杂逻辑）
+  // - "extra-large"：超大需求（多模块系统）
+  // - "continuous"：持续开发
+  type: "medium",
+
+  // 需求状态，取值范围：
+  // - "pending"：等待开始
+  // - "in_progress"：进行中
+  // - "completed"：已完成
+  // - "blocked"：被阻塞（等待外部依赖）
+  // - "cancelled"：已取消
+  status: "pending",
+
+  // 当前阶段名称（如 "implement", "verify" 等）
+  currentPhase: null,
+
+  // 创建时间，ISO 8601 格式
+  createdAt: "{{createdAt}}",
+
+  // 最后更新时间，ISO 8601 格式
+  updatedAt: "{{updatedAt}}",
+
+  // ========== Git 信息 ==========
+
+  git: {
+    // Git 远程仓库 URL
+    remote: "",
+    // 当前分支名
+    branch: "",
+    // 基础分支名（如 main, master）
+    baseBranch: "",
+    // 本地项目根目录路径
+    localPath: ""
+  },
+
+  // ========== 需求内容 ==========
+
+  // 需求详细描述（支持多行）
+  description: "",
+
+  // 验收标准列表，每项一个目标
+  acceptanceCriteria: [],
+
+  // ========== 进度日志 ==========
+
+  // 进度日志，按时间正序排列
+  progressLog: [],
+
+  // ========== 工作流进度 ==========
+
+  // 工作流阶段定义
+  // medium 工作流：plan → design → implement → test → review → verify → commit
+  progress: {
+    phases: [
+      { name: "plan", mode: "auto", status: "pending" },
+      { name: "design", mode: "auto", status: "pending" },
+      { name: "implement", mode: "auto", status: "pending" },
+      { name: "test", mode: "auto", status: "pending" },
+      { name: "review", mode: "manual", status: "pending" },
+      { name: "verify", mode: "manual", status: "pending" },
+      { name: "commit", mode: "auto", status: "pending" }
+    ]
+  }
+}
