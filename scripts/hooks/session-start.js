@@ -22,6 +22,126 @@ const {
 const { getPackageManager, getSelectionPrompt } = require('../lib/package-manager');
 const { listAliases } = require('../lib/session-aliases');
 const { detectProjectType } = require('../lib/project-detect');
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
+
+/**
+ * Expand ~ to home directory
+ */
+function expandHome(filePath) {
+  if (filePath && filePath.startsWith('~/')) {
+    return path.join(os.homedir(), filePath.slice(2));
+  }
+  return filePath;
+}
+
+/**
+ * Get requirements root directory
+ */
+function getRequirementsRoot() {
+  // Try to load from config first
+  const configPath = path.join(__dirname, '../../requirements/config.json5');
+  try {
+    if (fs.existsSync(configPath)) {
+      const content = fs.readFileSync(configPath, 'utf-8');
+      // Simple comment stripping
+      const cleaned = content
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
+      const config = JSON.parse(cleaned);
+      if (config.requirementsRoot) {
+        return expandHome(config.requirementsRoot);
+      }
+    }
+  } catch (_err) {
+    // Fall through to default
+  }
+  return path.join(os.homedir(), '.claude/requirements');
+}
+
+/**
+ * Load requirements index
+ */
+function loadRequirementsIndex() {
+  const root = getRequirementsRoot();
+  const indexPath = path.join(root, 'index.json');
+
+  try {
+    if (fs.existsSync(indexPath)) {
+      const content = fs.readFileSync(indexPath, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (_err) {
+    // No index or parse error
+  }
+  return { version: '1.0', requirements: [] };
+}
+
+/**
+ * Get current git info
+ */
+function getGitInfo() {
+  const { execSync } = require('child_process');
+  try {
+    const cwd = process.cwd();
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd, encoding: 'utf-8' }).trim();
+    return { branch, localPath: cwd };
+  } catch (_err) {
+    return { branch: '', localPath: process.cwd() };
+  }
+}
+
+/**
+ * Load requirements and output context
+ */
+function loadRequirementsContext() {
+  try {
+    const index = loadRequirementsIndex();
+    const gitInfo = getGitInfo();
+
+    if (index.requirements.length === 0) {
+      return null;
+    }
+
+    // Find requirements matching current git context
+    const activeRequirements = index.requirements.filter(req => {
+      if (req.git) {
+        if (req.git.branch === gitInfo.branch) return true;
+        if (req.git.localPath === gitInfo.localPath) return true;
+      }
+      return false;
+    });
+
+    // If no match, show all in_progress requirements
+    const inProgressReqs = index.requirements.filter(req => req.status === 'in_progress');
+
+    if (activeRequirements.length > 0) {
+      let context = '\n\n📋 Active Requirements (matched by git context):\n';
+      for (const req of activeRequirements) {
+        context += `  - ${req.id}: ${req.name} (${req.type}) - ${req.status}\n`;
+        if (req.currentPhase) {
+          context += `    Current phase: ${req.currentPhase}\n`;
+        }
+      }
+      return context;
+    } else if (inProgressReqs.length > 0) {
+      let context = '\n\n📋 In-Progress Requirements:\n';
+      for (const req of inProgressReqs.slice(0, 5)) {
+        context += `  - ${req.id}: ${req.name} (${req.type})\n`;
+        if (req.git && req.git.branch) {
+          context += `    Branch: ${req.git.branch}\n`;
+        }
+      }
+      context += '\nUse /continue <id> to continue a specific requirement';
+      return context;
+    }
+
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
 
 async function main() {
   const sessionsDir = getSessionsDir();
@@ -87,6 +207,12 @@ async function main() {
     output(`Project type: ${JSON.stringify(projectInfo)}`);
   } else {
     log('[SessionStart] No specific project type detected');
+  }
+
+  // Load and output requirements context
+  const requirementsContext = loadRequirementsContext();
+  if (requirementsContext) {
+    output(requirementsContext);
   }
 
   process.exit(0);
