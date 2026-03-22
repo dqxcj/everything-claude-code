@@ -86,5 +86,8 @@ temp/
 # Bootstrap pipeline outputs
 # Generated lock files in tool subdirectories
 .opencode/package-lock.json
+
+# Worktrees (isolated development workspaces)
+.worktrees/
 .opencode/node_modules/
 assets/images/security/badrudi-exploit.mp4
