@@ -177,6 +177,12 @@ async function createRequirement(name, type, description = '', acceptanceCriteri
   const root = getRequirementsRoot();
   const template = loadTemplate(type);
 
+  // Validate type against config
+  const validTypes = Object.keys(config.workflows || {});
+  if (!validTypes.includes(type)) {
+    throw new Error(`Invalid type "${type}". Valid types: ${validTypes.join(', ')}`);
+  }
+
   // Generate ID and timestamps
   const id = generateRequirementId();
   const now = new Date().toISOString();
