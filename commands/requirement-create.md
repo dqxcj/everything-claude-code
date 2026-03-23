@@ -21,15 +21,30 @@ description: 创建新需求，自动检测类型并匹配工作流
 
 ## 功能
 
+**必须使用 `scripts/requirement-manager.js` 脚本创建需求，不要手动创建文件！**
+
+调用方式：
+```javascript
+// 在项目目录下执行
+const rm = require('./scripts/requirement-manager');
+await rm.createRequirement(name, type, description, acceptanceCriteria);
+```
+
+或通过 node -e 调用：
+```bash
+node -e "const rm=require('./scripts/requirement-manager');rm.createRequirement('需求名称','medium','描述',[]).then(r=>console.log(JSON.stringify(r,null,2)))"
+```
+
 1. 解析需求描述
 2. 检测/分析需求类型：
    - 根据关键词和复杂度自动检测
    - 或使用显式指定的类型
-3. 生成基于时间戳的 ID: `req-{YYYYMMDD}-{HHMMSS}`
-4. 从模板创建需求文件
-5. 添加 git 信息（remote, branch, baseBranch, localPath）
-6. 创建初始 progressLog 条目
-7. 更新 index.json
+3. 调用 `createRequirement` 函数创建需求（不要手动创建文件！）
+4. 脚本会自动：
+   - 从模板创建 JSON 格式需求文件（放在 `requirements/requirements/` 目录）
+   - 添加 git 信息（remote, branch, baseBranch, localPath）
+   - 创建初始 progressLog 条目
+   - 更新 index.json
 
 ## 示例
 
@@ -41,5 +56,7 @@ description: 创建新需求，自动检测类型并匹配工作流
 
 ## 注意事项
 
+- **必须使用 `createRequirement` 函数创建需求文件**
+- **不要手动使用 Write 工具创建需求文件**
 - ID 生成使用时间戳，避免多终端场景下的冲突
 - Git 信息自动从当前目录捕获
