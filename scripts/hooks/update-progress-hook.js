@@ -4,7 +4,8 @@
  * Stop Hook: Update requirement progress on session end
  *
  * Reads CLAUDE_CURRENT_REQUIREMENT_ID and CLAUDE_CURRENT_PHASE from environment
- * and session summary from stdin, then updates the requirement progress.
+ * and session summary from stdin, then updates the requirement progress
+ * and creates instincts for continuous learning.
  *
  * Usage:
  *   CLAUDE_CURRENT_REQUIREMENT_ID=req-20260322-120000
@@ -12,7 +13,7 @@
  *   node update-progress-hook.js < session_summary.txt
  */
 
-const { updateRequirementProgress } = require('../requirement-manager');
+const { updateRequirementProgress, getRequirement, createInstinctsFromSession } = require('../requirement-manager');
 
 const MAX_STDIN = 1024 * 1024; // 1MB limit
 
@@ -54,6 +55,14 @@ async function main() {
       { summary: sessionSummary.slice(0, 500) }
     );
     console.log(`[Progress] Updated requirement ${requirementId}`);
+
+    // Create instinct from session for continuous learning
+    if (sessionSummary && sessionSummary.length > 10) {
+      const requirement = await getRequirement(requirementId);
+      if (requirement) {
+        await createInstinctsFromSession(requirement, sessionSummary);
+      }
+    }
   } catch (err) {
     // Don't fail the hook if requirement update fails
     console.error(`[Progress] Failed to update requirement ${requirementId}: ${err.message}`);

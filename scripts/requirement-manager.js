@@ -408,6 +408,9 @@ async function advancePhase(id, forceAdvance = false) {
     details: { phase: currentPhaseName }
   });
 
+  // Create instinct from phase completion (async, non-blocking)
+  createInstinctsFromPhase(requirement, currentPhaseName).catch(() => {});
+
   // Check if this phase requires manual confirmation before advancing
   const nextIndex = currentIndex + 1;
   const needsManualConfirmation = !forceAdvance &&
@@ -448,6 +451,8 @@ async function advancePhase(id, forceAdvance = false) {
     // All phases completed
     requirement.currentPhase = null;
     requirement.status = 'completed';
+    // Create instinct from completed requirement (async, non-blocking)
+    createInstinctsFromRequirement(requirement).catch(() => {});
   }
 
   requirement.updatedAt = now;
@@ -560,6 +565,193 @@ async function updateIndex() {
   }
 }
 
+/**
+ * Get project ID for instincts based on git remote URL
+ */
+function getProjectId() {
+  const gitInfo = getGitInfo();
+  if (gitInfo.remote) {
+    // Create a simple hash from remote URL for project identification
+    const crypto = require('crypto');
+    return crypto.createHash('md5').update(gitInfo.remote).digest('hex').substring(0, 12);
+  }
+  return 'global';
+}
+
+/**
+ * Create an instinct file for requirement development patterns
+ * @param {Object} instinctData - The instinct data
+ */
+async function createInstinct(instinctData) {
+  const os = require('os');
+  const homunculusDir = path.join(os.homedir(), '.claude', 'homunculus');
+  const projectId = getProjectId();
+  const instinctsDir = path.join(homunculusDir, 'projects', projectId, 'instincts');
+
+  try {
+    await ensureDir(instinctsDir);
+
+    const instinctId = instinctData.id || `rpt-${Date.now()}`;
+    const instinctPath = path.join(instinctsDir, `${instinctId}.md`);
+
+    const content = `---
+id: ${instinctId}
+trigger: "${instinctData.trigger || ''}"
+confidence: ${instinctData.confidence || 0.6}
+domain: "${instinctData.domain || 'workflow'}"
+source: "requirement-progress-tracker"
+scope: project
+project_id: "${projectId}"
+project_name: "${path.basename(getGitInfo().localPath || 'unknown')}"
+---
+
+# ${instinctData.title || 'RPT Pattern'}
+
+## Action
+${instinctData.action || ''}
+
+## Evidence
+${instinctData.evidence || ''}
+
+## Lessons
+${instinctData.lessons || ''}
+`;
+
+    await fsPromises.writeFile(instinctPath, content);
+    console.log(`[Progress] Created instinct: ${instinctId}`);
+    return instinctId;
+  } catch (err) {
+    console.error(`[Progress] Failed to create instinct: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Extract insights from a completed requirement and create instincts
+ * @param {Object} requirement - The completed requirement
+ */
+async function createInstinctsFromRequirement(requirement) {
+  if (requirement.status !== 'completed') return;
+
+  const phases = requirement.progress?.phases || [];
+  const completedCount = phases.filter(p => p.status === 'completed').length;
+
+  // Create instinct for overall requirement workflow
+  await createInstinct({
+    id: `rpt-${requirement.type}-workflow-${Date.now()}`,
+    trigger: `when completing a ${requirement.type} type requirement`,
+    confidence: 0.7,
+    domain: 'workflow',
+    title: `RPT ${requirement.type} workflow pattern`,
+    action: `Follow the ${requirement.type} workflow with ${phases.length} phases: ${phases.map(p => p.name).join(' -> ')}`,
+    evidence: `Completed ${completedCount} phases for requirement: ${requirement.name}`,
+    lessons: phases.map(p => `- ${p.name} (${p.mode}): ${p.status}`).join('\n')
+  });
+
+  // Create instinct for manual phase handling
+  const manualPhases = phases.filter(p => p.mode === 'manual');
+  if (manualPhases.length > 0) {
+    await createInstinct({
+      id: `rpt-manual-phase-handling-${Date.now()}`,
+      trigger: 'when encountering a manual phase in requirement workflow',
+      confidence: 0.8,
+      domain: 'workflow',
+      title: 'Manual phase confirmation pattern',
+      action: 'Manual phases require explicit user confirmation before advancing. Do not auto-advance.',
+      evidence: `Manual phases in ${requirement.name}: ${manualPhases.map(p => p.name).join(', ')}`,
+      lessons: 'Always wait for user "继续" confirmation at manual phases like review and verify.'
+    });
+  }
+}
+
+/**
+ * Extract insights from a completed phase and create instincts
+ * @param {Object} requirement - The requirement
+ * @param {string} phaseName - The completed phase name
+ * @param {Object} context - Additional context (decisions, artifacts, etc.)
+ */
+async function createInstinctsFromPhase(requirement, phaseName, context = {}) {
+  const phaseInsights = {
+    plan: {
+      trigger: 'when starting a new requirement planning phase',
+      title: 'Planning phase best practices',
+      action: 'Define clear acceptance criteria, identify dependencies, break into phases.',
+      lessons: context.summary || 'Planning creates foundation for implementation.'
+    },
+    design: {
+      trigger: 'when entering design phase',
+      title: 'Design phase best practices',
+      action: 'Create architecture diagrams, define interfaces, document decisions.',
+      lessons: context.summary || 'Design should be reviewed before implementation.'
+    },
+    implement: {
+      trigger: 'when implementing a requirement',
+      title: 'Implementation best practices',
+      action: 'Follow TDD, write tests first, keep functions small.',
+      lessons: context.summary || 'Implementation follows the plan and design.'
+    },
+    test: {
+      trigger: 'when testing implemented code',
+      title: 'Testing phase best practices',
+      action: 'Verify all acceptance criteria, run existing tests, add new tests.',
+      lessons: context.summary || 'Testing validates implementation correctness.'
+    },
+    review: {
+      trigger: 'when entering code review phase',
+      title: 'Review phase pattern',
+      action: 'Review code quality, security, performance. Wait for explicit confirmation.',
+      lessons: context.summary || 'Review requires manual confirmation before proceeding.'
+    },
+    verify: {
+      trigger: 'when verifying acceptance criteria',
+      title: 'Verification phase pattern',
+      action: 'Check each acceptance criterion, document verification results.',
+      lessons: context.summary || 'Verification confirms all acceptance criteria are met.'
+    },
+    commit: {
+      trigger: 'when committing completed work',
+      title: 'Commit phase best practices',
+      action: 'Use conventional commits, include test plan in PR description.',
+      lessons: context.summary || 'Commit should be atomic and well-documented.'
+    }
+  };
+
+  const insight = phaseInsights[phaseName];
+  if (insight) {
+    await createInstinct({
+      id: `rpt-${phaseName}-pattern-${Date.now()}`,
+      trigger: insight.trigger,
+      confidence: 0.7,
+      domain: 'workflow',
+      title: insight.title,
+      action: insight.action,
+      evidence: `Phase ${phaseName} completed for ${requirement.name}`,
+      lessons: insight.lessons + (context.decisions ? '\n\nDecisions:\n' + context.decisions.map(d => `- ${d}`).join('\n') : '')
+    });
+  }
+}
+
+/**
+ * Extract lessons from session progress and create instincts
+ * @param {Object} requirement - The current requirement
+ * @param {string} sessionSummary - Summary of session work
+ */
+async function createInstinctsFromSession(requirement, sessionSummary) {
+  if (!sessionSummary || sessionSummary.length < 10) return;
+
+  // Create instinct from session lessons
+  await createInstinct({
+    id: `rpt-session-${Date.now()}`,
+    trigger: 'when continuing a requirement development session',
+    confidence: 0.5,
+    domain: 'workflow',
+    title: `Session lesson from ${requirement.name}`,
+    action: 'Review progressLog to understand completed phases and next steps.',
+    evidence: `Session summary: ${sessionSummary.substring(0, 200)}`,
+    lessons: sessionSummary
+  });
+}
+
 // Export functions
 module.exports = {
   generateRequirementId,
@@ -574,5 +766,9 @@ module.exports = {
   getRequirementsRoot,
   getGitInfo,
   loadConfig,
-  expandHome
+  expandHome,
+  createInstinct,
+  createInstinctsFromRequirement,
+  createInstinctsFromPhase,
+  createInstinctsFromSession
 };
