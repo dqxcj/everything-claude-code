@@ -62,9 +62,10 @@
   // ========== 工作流进度 ==========
 
   // 工作流阶段定义
-  // micro 工作流：implement → verify → commit
+  // micro 工作流：brainstorm → implement → verify → commit
   progress: {
     phases: [
+      { name: "brainstorm", mode: "manual", status: "pending" },
       { name: "implement", mode: "auto", status: "pending" },
       { name: "verify", mode: "manual", status: "pending" },
       { name: "commit", mode: "auto", status: "pending" }

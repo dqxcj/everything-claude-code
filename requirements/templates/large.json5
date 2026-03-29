@@ -62,9 +62,10 @@
   // ========== 工作流进度 ==========
 
   // 工作流阶段定义
-  // large 工作流：plan → design → implement → test → review → security → e2e → verify → commit
+  // large 工作流：brainstorm → plan → design → implement → test → review → security → e2e → verify → commit
   progress: {
     phases: [
+      { name: "brainstorm", mode: "manual", status: "pending" },
       { name: "plan", mode: "auto", status: "pending" },
       { name: "design", mode: "auto", status: "pending" },
       { name: "implement", mode: "auto", status: "pending" },

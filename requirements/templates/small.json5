@@ -62,9 +62,10 @@
   // ========== 工作流进度 ==========
 
   // 工作流阶段定义
-  // small 工作流：plan → test-first → implement → review → commit
+  // small 工作流：brainstorm → plan → test-first → implement → review → commit
   progress: {
     phases: [
+      { name: "brainstorm", mode: "manual", status: "pending" },
       { name: "plan", mode: "auto", status: "pending" },
       { name: "test-first", mode: "auto", status: "pending" },
       { name: "implement", mode: "auto", status: "pending" },

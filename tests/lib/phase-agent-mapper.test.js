@@ -51,8 +51,12 @@ function runTests() {
     assert.strictEqual(PHASE_AGENT_MAP['review'], 'agents/code-reviewer.md');
   })) passed++; else failed++;
 
-  if (test('should have 12 phase mappings', () => {
-    assert.strictEqual(Object.keys(PHASE_AGENT_MAP).length, 12);
+  if (test('should map brainstorm phase to planner agent', () => {
+    assert.strictEqual(PHASE_AGENT_MAP['brainstorm'], 'agents/planner.md');
+  })) passed++; else failed++;
+
+  if (test('should have 13 phase mappings', () => {
+    assert.strictEqual(Object.keys(PHASE_AGENT_MAP).length, 13);
   })) passed++; else failed++;
 
   // getAgentForPhase tests
@@ -107,8 +111,8 @@ function runTests() {
     assert.ok(phases.includes('implement'));
   })) passed++; else failed++;
 
-  if (test('should return 12 registered phases', () => {
-    assert.strictEqual(getRegisteredPhases().length, 12);
+  if (test('should return 13 registered phases', () => {
+    assert.strictEqual(getRegisteredPhases().length, 13);
   })) passed++; else failed++;
 
   // getPhasesForAgent tests
