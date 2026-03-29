@@ -14,13 +14,21 @@
 - **智能恢复**: 重启后自动识别当前需求并恢复到正确状态
 - **混合推进模式**: 简单阶段自动推进，复杂阶段等待确认
 - **完整日志**: 记录所有进度历史，便于回顾和调试
+- **双存储位置**: 支持项目级（版本控制）和用户级（跨项目）存储
+
+### 双存储位置
+
+| 位置 | 路径 | 用途 |
+|------|------|------|
+| **project** (默认) | `{cwd}/.requirements/` | 随项目版本控制，团队可见 |
+| **user** | `~/.claude/requirements/` | 跨项目共享，个人使用 |
 
 ### 工作原理
 
 ```
 用户说"继续"
     ↓
-系统读取 ~/.claude/requirements/index.json
+系统读取需求索引（从 project 和 user 两个位置）
     ↓
 匹配当前需求（git branch / localPath / 最近活跃）
     ↓
@@ -55,7 +63,9 @@ ls ~/.claude/requirements/
 
 ### 目录结构
 
-安装后，`~/.claude/requirements/` 目录结构如下：
+根据存储位置不同，目录结构也不同：
+
+#### 用户级存储 (default)
 
 ```
 ~/.claude/requirements/
@@ -72,6 +82,22 @@ ls ~/.claude/requirements/
     ├── large.json5
     ├── extra-large.json5
     └── continuous.json5
+```
+
+#### 项目级存储 (--location=project)
+
+```
+{项目根目录}/
+├── .requirements/              # 需求目录（建议加入 .gitignore）
+│   ├── index.json             # 需求索引文件
+│   └── requirements/          # 需求文件目录
+│       ├── req-20260329-120000.json
+│       └── req-20260329-130000.json
+└── requirements/               # 项目级配置和模板（可选）
+    ├── config.json5
+    └── templates/
+        ├── micro.json5
+        └── ...
 ```
 
 ---
@@ -127,6 +153,7 @@ cat ~/.claude/requirements/requirements/req-20260322-143052.json | jq .progress
 ```
 /requirement-create <描述>
 /requirement-create --type=<type> <描述>
+/requirement-create --location=<location> <描述>
 ```
 
 #### 选项
@@ -139,13 +166,18 @@ cat ~/.claude/requirements/requirements/req-20260322-143052.json | jq .progress
 | `--type=large` | 大需求（多组件、复杂逻辑） |
 | `--type=extra-large` | 超大需求（多模块系统） |
 | `--type=continuous` | 持续开发模式 |
+| `--location=project` | 项目级存储 `.requirements/` (默认) |
+| `--location=user` | 用户级存储 `~/.claude/requirements/` |
 
-如果不指定 `--type`，系统会根据描述自动检测。
+#### 存储位置
+
+- **项目级 (默认)**: `.requirements/{id}.json` - 随项目版本控制，适合团队协作
+- **用户级**: `~/.claude/requirements/{id}.json` - 跨项目共享，适合个人使用
 
 #### 示例
 
 ```bash
-# 自动检测类型
+# 自动检测类型，项目级存储
 /requirement-create 实现用户登录功能
 
 # 明确指定大需求
@@ -153,17 +185,21 @@ cat ~/.claude/requirements/requirements/req-20260322-143052.json | jq .progress
 
 # 快速修复
 /requirement-create --type=micro 修复登录页面的拼写错误
+
+# 用户级存储（跨项目共享）
+/requirement-create --location=user 实现用户登录功能
 ```
 
 #### 内部流程
 
 1. 解析需求描述
-2. 检测/分析需求类型（自动或显式指定）
-3. 生成基于时间戳的 ID: `req-{YYYYMMDD}-{HHMMSS}`
-4. 从模板创建需求文件
-5. 捕获 Git 信息（remote, branch, baseBranch, localPath）
-6. 创建初始 progressLog 条目
-7. 更新 index.json
+2. 检测/分析需求类型（自动或显式指定 `--type`）
+3. 检测存储位置（默认 `project`，或 `--location=user`）
+4. 生成基于时间戳的 ID: `req-{YYYYMMDD}-{HHMMSS}`
+5. 从模板创建需求文件到对应存储位置
+6. 捕获 Git 信息（remote, branch, baseBranch, localPath）
+7. 创建初始 progressLog 条目（包含存储位置）
+8. 更新对应位置的 index.json
 
 ---
 
@@ -432,9 +468,11 @@ verify 暂停，等待用户确认
 ```
 会话启动 / 重启
     ↓
-读取 ~/.claude/requirements/index.json
+读取两个位置的 index.json
+  - 项目级: {cwd}/.requirements/index.json
+  - 用户级: ~/.claude/requirements/index.json
     ↓
-获取所有活跃需求（status: in_progress）
+合并所有活跃需求（status: in_progress）
     ↓
 自动猜测当前需求：
   1. 用 git branch 匹配
@@ -470,13 +508,27 @@ node scripts/requirement-manager.js list
 /continue req-20260322-143052
 ```
 
+### 按位置筛选
+
+可以使用 `--location` 参数筛选特定位置的需求：
+
+```bash
+# 只查看项目级需求
+node scripts/requirement-manager.js list --location=project
+
+# 只查看用户级需求
+node scripts/requirement-manager.js list --location=user
+```
+
 ---
 
 ## 8. 目录结构
 
 ### 需求文件位置
 
-所有需求文件存储在 `~/.claude/requirements/requirements/` 目录：
+需求文件根据创建时的 `--location` 参数存储在不同位置：
+
+#### 用户级存储 (`--location=user`)
 
 ```
 ~/.claude/requirements/
@@ -487,9 +539,22 @@ node scripts/requirement-manager.js list
 └── templates/                  # 模板目录（安装时复制）
 ```
 
+#### 项目级存储 (`--location=project`)
+
+```
+{项目根目录}/
+└── .requirements/
+    ├── index.json                  # 索引文件
+    └── requirements/               # 需求文件目录
+        ├── req-20260329-120000.json   # 需求 C
+        └── req-20260329-130000.json   # 需求 D
+```
+
 **需求文件名格式**: `{requirement-id}.json`
 
 例如：`req-20260322-143052.json`
+
+**重要**: 项目级存储 `.requirements/` 建议加入 `.gitignore`，除非你希望团队共享需求进度。
 
 ---
 
@@ -552,6 +617,8 @@ node scripts/requirement-manager.js list
     "baseBranch": "main",
     "localPath": "/home/user/projects/myapp"
   },
+
+  "storageLocation": "project",
 
   "description": "实现用户注册、登录、登出功能，支持邮箱和第三方OAuth。",
 
@@ -621,10 +688,13 @@ node scripts/requirement-manager.js list
 | 文件路径 | 说明 |
 |----------|------|
 | `scripts/requirement-manager.js` | 核心需求管理脚本 |
+| `~/.claude/scripts/requirement-manager.js` | 用户级部署的脚本副本 |
 | `commands/requirement-create.md` | 创建需求命令定义 |
-| `commands/continue.md` | 继续开发命令定义 |
+| `~/.claude/commands/requirement-create.md` | 用户级部署的命令定义副本 |
 | `requirements/config.json5` | 全局配置 |
 | `requirements/templates/*.json5` | 需求模板 |
+| `.requirements/` | 项目级需求目录（默认） |
+| `~/.claude/requirements/` | 用户级需求目录 |
 
 ### 环境变量
 
@@ -646,3 +716,23 @@ A: `cat ~/.claude/requirements/requirements/{id}.json | jq .progressLog`
 **Q: 可以同时开发多个需求吗？**
 
 A: 可以，但建议一次专注于一个需求。其他需求会保留在 `in_progress` 状态。
+
+**Q: 两种存储位置如何选择？**
+
+| 场景 | 推荐位置 |
+|------|----------|
+| 团队协作项目，需求进度需要共享 | **project** |
+| 个人项目，跨项目使用同一套需求 | **user** |
+| 需要将需求提交到 git | **project** |
+| 多项目咨询类工作 | **user** |
+
+**Q: 如何迁移需求到不同位置？**
+
+A: 目前需要手动迁移：
+1. 将需求 JSON 文件复制到目标位置的 `requirements/` 目录
+2. 更新 `storageLocation` 字段
+3. 重新构建目标位置的 `index.json`
+
+**Q: 项目级需求目录应该加入 .gitignore 吗？**
+
+A: 建议加入，除非你需要团队共享需求进度。大多数情况下需求进度是个人隐私信息。

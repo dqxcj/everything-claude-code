@@ -78,11 +78,12 @@ Use parallel execution for independent operations — launch multiple agents sim
 
 ### 进度追踪
 - 记住当前需求和工作流阶段
-- 会话结束时记录进度到 `~/.claude/requirements/`
-- 重启时从 index.json 恢复状态
+- 会话结束时记录进度到需求对应的存储位置
+- 支持项目级 (`.requirements/`) 和用户级 (`~/.claude/requirements/`) 两种存储
+- 重启时从两个位置恢复状态
 
 ### 会话恢复
-- 读取 index.json 查找活跃需求
+- 读取 project 和 user 两个位置的 index.json
 - 按 git branch/localPath 匹配需求
 - 询问用户确认继续哪个需求
 
