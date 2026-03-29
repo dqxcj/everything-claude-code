@@ -1,7 +1,67 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-03-29T12:39:33.545Z",
+  "updatedAt": "2026-03-29T14:30:41.929Z",
   "requirements": [
+    {
+      "id": "req-20260329-222104",
+      "name": "需求进度追踪器文档标准化",
+      "type": "medium",
+      "status": "pending",
+      "currentPhase": "plan",
+      "createdAt": "2026-03-29T14:21:04.857Z",
+      "updatedAt": "2026-03-29T14:30:41.922Z",
+      "git": {
+        "branch": "feature/ecc-features-webpage",
+        "remote": "git@github.com:dqxcj/everything-claude-code.git",
+        "baseBranch": "main",
+        "localPath": "/home/ljy/Program/everything-claude-code"
+      }
+    },
+    {
+      "id": "req-20260329-215445",
+      "name": "Test Requirement Skill",
+      "type": "small",
+      "status": "pending",
+      "currentPhase": "brainstorm",
+      "createdAt": "2026-03-29T13:54:45.486Z",
+      "updatedAt": "2026-03-29T13:54:45.486Z",
+      "git": {
+        "branch": "feature/ecc-features-webpage",
+        "remote": "git@github.com:dqxcj/everything-claude-code.git",
+        "baseBranch": "main",
+        "localPath": "/home/ljy/Program/everything-claude-code"
+      }
+    },
+    {
+      "id": "req-20260329-211628",
+      "name": "ECC工作流整合到需求进度追踪器",
+      "type": "medium",
+      "status": "completed",
+      "currentPhase": null,
+      "createdAt": "2026-03-29T13:16:28.077Z",
+      "updatedAt": "2026-03-29T13:33:52.247Z",
+      "git": {
+        "branch": "feature/ecc-features-webpage",
+        "remote": "git@github.com:dqxcj/everything-claude-code.git",
+        "baseBranch": "main",
+        "localPath": "/home/ljy/Program/everything-claude-code"
+      }
+    },
+    {
+      "id": "req-20260329-211250",
+      "name": "ECC工作流整合到需求进度追踪器",
+      "type": "medium",
+      "status": "pending",
+      "currentPhase": null,
+      "createdAt": "2026-03-29T13:12:50.054Z",
+      "updatedAt": "2026-03-29T13:12:50.054Z",
+      "git": {
+        "branch": "feature/ecc-features-webpage",
+        "remote": "git@github.com:dqxcj/everything-claude-code.git",
+        "baseBranch": "main",
+        "localPath": "/home/ljy/Program/everything-claude-code"
+      }
+    },
     {
       "id": "req-20260329-203933",
       "name": "test",

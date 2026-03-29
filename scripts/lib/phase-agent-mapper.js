@@ -9,9 +9,9 @@ const path = require('path');
 
 // Phase to Agent file mapping
 const PHASE_AGENT_MAP = {
-  'brainstorm': 'agents/planner.md',
+  'brainstorm': 'agents/requirement-workflow.md',
   'plan': 'agents/planner.md',
-  'design': 'agents/architect.md',
+  'design': 'agents/design-workflow.md',
   'ideation': 'agents/planner.md',
   'research': 'agents/planner.md',
   'implement': 'agents/tdd-guide.md',

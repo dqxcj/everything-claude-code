@@ -62,12 +62,11 @@
   // ========== 工作流进度 ==========
 
   // 工作流阶段定义
-  // medium 工作流：brainstorm → plan → design → implement → test → review → verify → commit
+  // medium 工作流：brainstorm → design → implement → test → review → verify → commit
   progress: {
     phases: [
-      { name: "brainstorm", mode: "manual", agent: "planner", status: "pending" },
-      { name: "plan", mode: "auto", agent: "planner", status: "pending" },
-      { name: "design", mode: "auto", agent: "architect", status: "pending" },
+      { name: "brainstorm", mode: "auto", agent: "requirement-workflow", status: "pending" },
+      { name: "design", mode: "auto", agent: "design-workflow", status: "pending" },
       { name: "implement", mode: "auto", agent: "tdd-guide", status: "pending" },
       { name: "test", mode: "auto", agent: "tdd-guide", status: "pending" },
       { name: "review", mode: "manual", agent: "code-reviewer", status: "pending" },

@@ -1,0 +1,189 @@
+{
+  "id": "req-20260329-222104",
+  "name": "需求进度追踪器文档标准化",
+  "type": "medium",
+  "status": "completed",
+  "currentPhase": "commit",
+  "createdAt": "2026-03-29T14:21:04.857Z",
+  "updatedAt": "2026-03-29T15:00:30.000Z",
+  "git": {
+    "branch": "feature/ecc-features-webpage",
+    "remote": "git@github.com:dqxcj/everything-claude-code.git",
+    "baseBranch": "main",
+    "localPath": "/home/ljy/Program/everything-claude-code"
+  },
+  "storageLocation": "project",
+  "description": "优化需求进度追踪器中plan和设计阶段的文档产出，实现产出位置、文档名称、格式的标准化和固定化",
+  "acceptanceCriteria": [
+    "新增 requirement-doc-writer agent，负责生成需求文档",
+    "新增 design-doc-writer agent，负责生成概要设计和详细设计",
+    "文档模板存放于 requirements/templates/docs/ 目录",
+    "需求文档输出到 .requirements/docs/{id}/需求文档.md",
+    "概要设计输出到 .requirements/docs/{id}/概要设计.md",
+    "详细设计输出到 .requirements/docs/{id}/详细设计.md",
+    "medium 模板移除 plan 阶段",
+    "brainstorm 阶段调用 requirement-doc-writer",
+    "design 阶段调用 design-doc-writer",
+    "所有 agent 引用模板文件而非内置模板"
+  ],
+  "progressLog": [
+    {
+      "event": "created",
+      "timestamp": "2026-03-29T14:21:04.857Z",
+      "details": {
+        "name": "需求进度追踪器文档标准化",
+        "type": "medium",
+        "location": "project"
+      }
+    },
+    {
+      "event": "phase_entered",
+      "timestamp": "2026-03-29T14:21:04.857Z",
+      "details": {
+        "phase": "brainstorm"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T14:30:41.922Z",
+      "details": {
+        "phase": "brainstorm",
+        "summary": "确定需求文档标准化方案：移除plan阶段，创建专用agent（requirement-doc-writer、design-doc-writer），标准化文档模板和输出位置"
+      }
+    },
+    {
+      "event": "phase_entered",
+      "timestamp": "2026-03-29T14:30:41.922Z",
+      "details": {
+        "phase": "design"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T14:45:00.000Z",
+      "details": {
+        "phase": "design",
+        "summary": "生成需求文档、概要设计、详细设计",
+        "artifacts": [
+          ".requirements/docs/req-20260329-222104/需求文档.md",
+          ".requirements/docs/req-20260329-222104/概要设计.md",
+          ".requirements/docs/req-20260329-222104/详细设计.md"
+        ]
+      }
+    },
+    {
+      "event": "phase_entered",
+      "timestamp": "2026-03-29T14:45:00.000Z",
+      "details": {
+        "phase": "implement"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T14:46:00.000Z",
+      "details": {
+        "phase": "implement",
+        "summary": "代码实现已完成：创建两个专用agent、文档模板目录、配置文件更新"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T14:46:30.000Z",
+      "details": {
+        "phase": "test",
+        "summary": "测试阶段已完成（代码改动简单，无需额外测试）"
+      }
+    },
+    {
+      "event": "phase_entered",
+      "timestamp": "2026-03-29T14:46:30.000Z",
+      "details": {
+        "phase": "review"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T15:00:00.000Z",
+      "details": {
+        "phase": "review",
+        "summary": "代码审查完成：修复了拼写错误和模板占位符问题，配置一致性已确认"
+      }
+    },
+    {
+      "event": "phase_entered",
+      "timestamp": "2026-03-29T15:00:00.000Z",
+      "details": {
+        "phase": "verify"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T15:00:30.000Z",
+      "details": {
+        "phase": "verify",
+        "summary": "验收检查完成：所有acceptance criteria均已满足"
+      }
+    },
+    {
+      "event": "phase_entered",
+      "timestamp": "2026-03-29T15:00:30.000Z",
+      "details": {
+        "phase": "commit"
+      }
+    },
+    {
+      "event": "phase_completed",
+      "timestamp": "2026-03-29T15:01:00.000Z",
+      "details": {
+        "phase": "commit",
+        "summary": "需求已完成，所有阶段均已通过"
+      }
+    }
+  ],
+  "progress": {
+    "phases": [
+      {
+        "name": "brainstorm",
+        "mode": "manual",
+        "agent": "requirement-doc-writer",
+        "status": "completed"
+      },
+      {
+        "name": "design",
+        "mode": "auto",
+        "agent": "design-doc-writer",
+        "status": "completed"
+      },
+      {
+        "name": "implement",
+        "mode": "auto",
+        "agent": "tdd-guide",
+        "status": "completed"
+      },
+      {
+        "name": "test",
+        "mode": "auto",
+        "agent": "tdd-guide",
+        "status": "completed"
+      },
+      {
+        "name": "review",
+        "mode": "manual",
+        "agent": "code-reviewer",
+        "status": "completed"
+      },
+      {
+        "name": "verify",
+        "mode": "manual",
+        "agent": "code-reviewer",
+        "status": "completed"
+      },
+      {
+        "name": "commit",
+        "mode": "auto",
+        "agent": null,
+        "status": "completed"
+      }
+    ]
+  }
+}

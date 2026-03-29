@@ -13,16 +13,16 @@
       phases: ["implement", "verify", "commit"]
     },
     small: {
-      phases: ["plan", "test-first", "implement", "review", "commit"]
+      phases: ["brainstorm", "test-first", "implement", "review", "commit"]
     },
     medium: {
-      phases: ["plan", "design", "implement", "test", "review", "verify", "commit"]
+      phases: ["brainstorm", "design", "implement", "test", "review", "verify", "commit"]
     },
     large: {
-      phases: ["plan", "design", "implement", "test", "review", "security", "e2e", "verify", "commit"]
+      phases: ["brainstorm", "design", "implement", "test", "review", "security", "e2e", "verify", "commit"]
     },
     "extra-large": {
-      phases: ["research", "ideation", "plan", "design", "implement", "test", "review", "security", "e2e", "optimize", "verify", "commit"]
+      phases: ["brainstorm", "research", "ideation", "design", "implement", "test", "review", "security", "e2e", "optimize", "verify", "commit"]
     },
     continuous: {
       phases: ["loop"]
@@ -31,21 +31,21 @@
 
   // 自动推进的阶段（mode: auto）
   autoPhases: {
-    micro: ["implement", "commit"],
-    small: ["test-first", "implement", "commit"],
-    medium: ["design", "implement", "test", "verify", "commit"],
-    large: ["design", "implement", "test", "e2e", "verify", "commit"],
-    "extra-large": ["design", "implement", "test", "e2e", "optimize", "verify", "commit"],
+    micro: ["brainstorm", "implement", "commit"],
+    small: ["brainstorm", "test-first", "implement", "commit"],
+    medium: ["brainstorm", "design", "implement", "test", "verify", "commit"],
+    large: ["brainstorm", "design", "implement", "test", "security", "e2e", "verify", "commit"],
+    "extra-large": ["brainstorm", "design", "implement", "test", "security", "e2e", "optimize", "verify", "commit"],
     continuous: ["loop"]
   },
 
   // 需要手动确认的阶段（mode: manual）
   manualPhases: {
     micro: ["verify"],
-    small: ["plan", "review"],
-    medium: ["plan", "review"],
-    large: ["plan", "review", "security"],
-    "extra-large": ["research", "ideation", "plan", "review", "security"],
+    small: ["review"],
+    medium: ["review"],
+    large: ["review"],
+    "extra-large": ["review"],
     continuous: []
   },
 

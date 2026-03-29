@@ -62,19 +62,18 @@
   // ========== 工作流进度 ==========
 
   // 工作流阶段定义
-  // large 工作流：brainstorm → plan → design → implement → test → review → security → e2e → verify → commit
+  // large 工作流：brainstorm → design → implement → test → review → security → e2e → verify → commit
   progress: {
     phases: [
-      { name: "brainstorm", mode: "manual", status: "pending" },
-      { name: "plan", mode: "auto", status: "pending" },
-      { name: "design", mode: "auto", status: "pending" },
-      { name: "implement", mode: "auto", status: "pending" },
-      { name: "test", mode: "auto", status: "pending" },
-      { name: "review", mode: "manual", status: "pending" },
-      { name: "security", mode: "auto", status: "pending" },
-      { name: "e2e", mode: "auto", status: "pending" },
-      { name: "verify", mode: "manual", status: "pending" },
-      { name: "commit", mode: "auto", status: "pending" }
+      { name: "brainstorm", mode: "auto", agent: "requirement-workflow", status: "pending" },
+      { name: "design", mode: "auto", agent: "design-workflow", status: "pending" },
+      { name: "implement", mode: "auto", agent: "tdd-guide", status: "pending" },
+      { name: "test", mode: "auto", agent: "tdd-guide", status: "pending" },
+      { name: "review", mode: "manual", agent: "code-reviewer", status: "pending" },
+      { name: "security", mode: "auto", agent: "security-reviewer", status: "pending" },
+      { name: "e2e", mode: "auto", agent: "e2e-runner", status: "pending" },
+      { name: "verify", mode: "manual", agent: "code-reviewer", status: "pending" },
+      { name: "commit", mode: "auto", agent: null, status: "pending" }
     ]
   }
 }
