@@ -65,13 +65,13 @@
   // medium 工作流：plan → design → implement → test → review → verify → commit
   progress: {
     phases: [
-      { name: "plan", mode: "auto", status: "pending" },
-      { name: "design", mode: "auto", status: "pending" },
-      { name: "implement", mode: "auto", status: "pending" },
-      { name: "test", mode: "auto", status: "pending" },
-      { name: "review", mode: "manual", status: "pending" },
-      { name: "verify", mode: "manual", status: "pending" },
-      { name: "commit", mode: "auto", status: "pending" }
+      { name: "plan", mode: "auto", agent: "planner", status: "pending" },
+      { name: "design", mode: "auto", agent: "architect", status: "pending" },
+      { name: "implement", mode: "auto", agent: "tdd-guide", status: "pending" },
+      { name: "test", mode: "auto", agent: "tdd-guide", status: "pending" },
+      { name: "review", mode: "manual", agent: "code-reviewer", status: "pending" },
+      { name: "verify", mode: "manual", agent: "code-reviewer", status: "pending" },
+      { name: "commit", mode: "auto", agent: null, status: "pending" }
     ]
   }
 }

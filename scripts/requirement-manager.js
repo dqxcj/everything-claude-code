@@ -589,6 +589,206 @@ async function updateIndex(location = 'project') {
   }
 }
 
+// Import workflow orchestrator functions
+const {
+  getAgentForPhase,
+  getAgentNameForPhase,
+  phaseHasAgent,
+  getNextPhase,
+  needsManualConfirmation,
+  executePhase,
+  generatePhaseHandoff: orchestratorGenerateHandoff,
+  getWorkflowStatus: getOrchestratorStatus
+} = require('./lib/ecc-workflow-orchestrator');
+
+/**
+ * Get Agent information for a specific phase
+ * @param {string} id - Requirement ID
+ * @param {string} phaseName - Phase name to get Agent for
+ * @returns {Object} - { agentPath, agentName, hasAgent }
+ */
+async function invokePhaseAgent(id, phaseName) {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  return {
+    agentPath: getAgentForPhase(phaseName),
+    agentName: getAgentNameForPhase(phaseName),
+    hasAgent: phaseHasAgent(phaseName)
+  };
+}
+
+/**
+ * Get the next Agent that will be invoked based on current phase
+ * @param {string} id - Requirement ID
+ * @returns {Object} - { nextPhase, nextAgent, nextAgentPath, hasAgent }
+ */
+async function getNextPhaseAgent(id) {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  const currentPhase = requirement.currentPhase;
+  const phases = requirement.progress?.phases || [];
+
+  if (!currentPhase) {
+    return { nextPhase: null, nextAgent: null, nextAgentPath: null, hasAgent: false };
+  }
+
+  const nextPhase = getNextPhase(phases, currentPhase);
+
+  if (!nextPhase) {
+    return { nextPhase: null, nextAgent: null, nextAgentPath: null, hasAgent: false };
+  }
+
+  return {
+    nextPhase: nextPhase.name,
+    nextAgent: getAgentNameForPhase(nextPhase.name),
+    nextAgentPath: getAgentForPhase(nextPhase.name),
+    hasAgent: phaseHasAgent(nextPhase.name)
+  };
+}
+
+/**
+ * Check if a specific phase needs manual confirmation
+ * @param {string} id - Requirement ID
+ * @param {string} phaseName - Phase name to check
+ * @returns {boolean} - True if manual confirmation is needed
+ */
+async function checkPhaseNeedsConfirmation(id, phaseName) {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  const phases = requirement.progress?.phases || [];
+  const phase = phases.find(p => p.name === phaseName);
+
+  return needsManualConfirmation(phase);
+}
+
+/**
+ * Generate a handoff document for a phase transition
+ * @param {string} id - Requirement ID
+ * @param {string} fromPhase - Completed phase name
+ * @param {string} toPhase - Next phase name
+ * @param {Object} phaseData - Optional phase execution data
+ * @returns {Promise<string>} - Path to saved handoff file
+ */
+async function generatePhaseHandoff(id, fromPhase, toPhase, phaseData = {}) {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  return orchestratorGenerateHandoff(requirement, fromPhase, toPhase, phaseData);
+}
+
+/**
+ * Get detailed workflow status for a requirement
+ * @param {string} id - Requirement ID
+ * @returns {Promise<Object>} - Workflow status details
+ */
+async function getWorkflowStatus(id) {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  const status = getOrchestratorStatus(requirement);
+
+  // Add requirement details
+  return {
+    ...status,
+    requirementName: requirement.name,
+    description: requirement.description,
+    acceptanceCriteria: requirement.acceptanceCriteria,
+    progressLog: requirement.progressLog.slice(-5), // Last 5 entries
+    storageLocation: requirement.storageLocation
+  };
+}
+
+/**
+ * Transform acceptance criteria to structured format with IDs
+ * @param {string} id - Requirement ID
+ * @returns {Promise<Object>} - Updated requirement with structured AC
+ */
+async function structureAcceptanceCriteria(id) {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  // If already structured, return as-is
+  if (requirement.acceptanceCriteria && requirement.acceptanceCriteria.length > 0 &&
+      typeof requirement.acceptanceCriteria[0] === 'object') {
+    return requirement;
+  }
+
+  // Transform string array to structured format
+  const structured = requirement.acceptanceCriteria.map((ac, index) => ({
+    id: `AC-${index + 1}`,
+    description: ac,
+    status: 'unchecked',
+    verifiedAt: null,
+    verifiedBy: null,
+    notes: ''
+  }));
+
+  requirement.acceptanceCriteria = structured;
+  requirement.updatedAt = new Date().toISOString();
+
+  // Save
+  const root = getRequirementsRoot(requirement.storageLocation || 'project');
+  const reqPath = path.join(root, 'requirements', `${id}.json`);
+  await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
+
+  return requirement;
+}
+
+/**
+ * Update acceptance criteria status
+ * @param {string} id - Requirement ID
+ * @param {string} acId - Acceptance criteria ID (e.g., 'AC-1')
+ * @param {string} status - New status ('checked', 'unchecked', 'partial')
+ * @param {string} notes - Optional notes
+ * @returns {Promise<Object>} - Updated acceptance criteria
+ */
+async function updateAcceptanceCriteriaStatus(id, acId, status, notes = '') {
+  const requirement = await getRequirement(id);
+  if (!requirement) {
+    throw new Error(`Requirement ${id} not found`);
+  }
+
+  if (!requirement.acceptanceCriteria || typeof requirement.acceptanceCriteria[0] !== 'object') {
+    throw new Error('Acceptance criteria not structured. Call structureAcceptanceCriteria first.');
+  }
+
+  const ac = requirement.acceptanceCriteria.find(a => a.id === acId);
+  if (!ac) {
+    throw new Error(`Acceptance criteria ${acId} not found`);
+  }
+
+  ac.status = status;
+  ac.verifiedAt = new Date().toISOString();
+  ac.verifiedBy = os.userInfo().username || process.env.USER || 'unknown';
+  if (notes) {
+    ac.notes = notes;
+  }
+
+  requirement.updatedAt = new Date().toISOString();
+
+  // Save
+  const root = getRequirementsRoot(requirement.storageLocation || 'project');
+  const reqPath = path.join(root, 'requirements', `${id}.json`);
+  await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
+
+  return requirement;
+}
+
 // Export functions
 module.exports = {
   generateRequirementId,
@@ -603,5 +803,13 @@ module.exports = {
   getRequirementsRoot,
   getGitInfo,
   loadConfig,
-  expandHome
+  expandHome,
+  // New workflow integration functions
+  invokePhaseAgent,
+  getNextPhaseAgent,
+  checkPhaseNeedsConfirmation,
+  generatePhaseHandoff,
+  getWorkflowStatus,
+  structureAcceptanceCriteria,
+  updateAcceptanceCriteriaStatus
 };
