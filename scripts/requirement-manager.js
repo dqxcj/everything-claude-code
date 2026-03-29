@@ -132,9 +132,15 @@ function getGitInfo() {
 
 /**
  * Get requirements root directory
+ * @param {string} location - 'project' or 'user', default 'project'
  */
-function getRequirementsRoot() {
+function getRequirementsRoot(location = 'project') {
   const config = loadConfig();
+  if (location === 'project') {
+    // Project-level: use {cwd}/.requirements/
+    return path.join(process.cwd(), '.requirements');
+  }
+  // User-level: use configured path
   return expandHome(config.requirementsRoot || '~/.claude/requirements');
 }
 
@@ -151,9 +157,10 @@ async function ensureDir(dirPath) {
 
 /**
  * Initialize requirements directory structure
+ * @param {string} location - 'project' or 'user'
  */
-async function initRequirementsDir() {
-  const root = getRequirementsRoot();
+async function initRequirementsDir(location = 'project') {
+  const root = getRequirementsRoot(location);
   await ensureDir(root);
   await ensureDir(path.join(root, 'requirements'));
   await ensureDir(path.join(root, 'templates'));
@@ -171,10 +178,15 @@ async function initRequirementsDir() {
 
 /**
  * Create a new requirement
+ * @param {string} name - Requirement name
+ * @param {string} type - Workflow type (micro/small/medium/large/extra-large/continuous)
+ * @param {string} description - Requirement description
+ * @param {string[]} acceptanceCriteria - Acceptance criteria list
+ * @param {string} location - Storage location: 'project' (default) or 'user'
  */
-async function createRequirement(name, type, description = '', acceptanceCriteria = []) {
+async function createRequirement(name, type, description = '', acceptanceCriteria = [], location = 'project') {
   const config = loadConfig();
-  const root = getRequirementsRoot();
+  const root = getRequirementsRoot(location);
   const template = loadTemplate(type);
 
   // Generate ID and timestamps
@@ -192,10 +204,11 @@ async function createRequirement(name, type, description = '', acceptanceCriteri
     createdAt: now,
     updatedAt: now,
     git: gitInfo,
+    storageLocation: location,
     description,
     acceptanceCriteria,
     progressLog: [
-      { event: 'created', timestamp: now, details: { name, type } }
+      { event: 'created', timestamp: now, details: { name, type, location } }
     ],
     progress: template ? { ...template.progress } : { phases: [] }
   };
@@ -225,73 +238,92 @@ async function createRequirement(name, type, description = '', acceptanceCriteri
 }
 
 /**
- * Get requirement by ID
+ * Get requirement by ID (searches in both project and user locations)
  */
 async function getRequirement(id) {
-  const root = getRequirementsRoot();
-  const reqPath = path.join(root, 'requirements', `${id}.json`);
-
-  try {
-    const content = await fsPromises.readFile(reqPath, 'utf-8');
-    return JSON.parse(content);
-  } catch (_err) {
-    return null;
+  // Try project-level first, then user-level
+  const locations = ['project', 'user'];
+  for (const loc of locations) {
+    const root = getRequirementsRoot(loc);
+    const reqPath = path.join(root, 'requirements', `${id}.json`);
+    try {
+      const content = await fsPromises.readFile(reqPath, 'utf-8');
+      return JSON.parse(content);
+    } catch (_err) {
+      // Not found in this location, try next
+    }
   }
+  return null;
 }
 
 /**
- * List requirements with optional filter
+ * List requirements with optional filter (searches in both project and user locations)
  */
 async function listRequirements(filter = {}) {
-  const root = getRequirementsRoot();
-  const reqDir = path.join(root, 'requirements');
-  const indexPath = path.join(root, 'index.json');
+  const locations = ['project', 'user'];
+  let allRequirements = [];
 
-  // Try to read from index first
-  try {
-    const indexContent = await fsPromises.readFile(indexPath, 'utf-8');
-    const index = JSON.parse(indexContent);
+  for (const loc of locations) {
+    const root = getRequirementsRoot(loc);
+    const reqDir = path.join(root, 'requirements');
+    const indexPath = path.join(root, 'index.json');
 
-    let requirements = index.requirements || [];
+    // Try to read from index first
+    try {
+      const indexContent = await fsPromises.readFile(indexPath, 'utf-8');
+      const index = JSON.parse(indexContent);
+      let requirements = index.requirements || [];
 
-    // Apply filters
-    if (filter.type) {
-      requirements = requirements.filter(r => r.type === filter.type);
-    }
-    if (filter.status) {
-      requirements = requirements.filter(r => r.status === filter.status);
-    }
-    if (filter.branch) {
-      requirements = requirements.filter(r => r.git && r.git.branch === filter.branch);
-    }
-
-    return requirements;
-  } catch (_err) {
-    // Index doesn't exist, scan directory
-  }
-
-  // Fallback: scan directory
-  try {
-    const files = await fsPromises.readdir(reqDir);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
-
-    let requirements = [];
-    for (const file of jsonFiles) {
-      const content = await fsPromises.readFile(path.join(reqDir, file), 'utf-8');
-      const req = JSON.parse(content);
+      // Add storage location to each
+      requirements = requirements.map(r => ({ ...r, storageLocation: loc }));
 
       // Apply filters
-      if (filter.type && req.type !== filter.type) continue;
-      if (filter.status && req.status !== filter.status) continue;
-      if (filter.branch && req.git && req.git.branch !== filter.branch) continue;
+      if (filter.type) {
+        requirements = requirements.filter(r => r.type === filter.type);
+      }
+      if (filter.status) {
+        requirements = requirements.filter(r => r.status === filter.status);
+      }
+      if (filter.branch) {
+        requirements = requirements.filter(r => r.git && r.git.branch === filter.branch);
+      }
+      if (filter.location) {
+        requirements = requirements.filter(r => r.storageLocation === filter.location);
+      }
 
-      requirements.push(req);
+      allRequirements = allRequirements.concat(requirements);
+      continue;
+    } catch (_err) {
+      // Index doesn't exist, scan directory
     }
 
-    return requirements;
-  } catch (_err) {
-    return [];
+    // Fallback: scan directory
+    try {
+      const files = await fsPromises.readdir(reqDir);
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
+
+      for (const file of jsonFiles) {
+        const content = await fsPromises.readFile(path.join(reqDir, file), 'utf-8');
+        const req = JSON.parse(content);
+        req.storageLocation = loc;
+
+        // Apply filters
+        if (filter.type && req.type !== filter.type) continue;
+        if (filter.status && req.status !== filter.status) continue;
+        if (filter.branch && req.git && req.git.branch !== filter.branch) continue;
+        if (filter.location && req.storageLocation !== filter.location) continue;
+
+        allRequirements.push(req);
+      }
+    } catch (_err) {
+      // Directory may not exist
+    }
   }
+
+  // Sort by updatedAt descending
+  allRequirements.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  return allRequirements;
 }
 
 /**
@@ -358,13 +390,13 @@ async function updateRequirementProgress(id, phase, event, details = {}) {
     }
   }
 
-  // Save updated requirement
-  const root = getRequirementsRoot();
+  // Save updated requirement (use the requirement's stored location)
+  const root = getRequirementsRoot(requirement.storageLocation || 'project');
   const reqPath = path.join(root, 'requirements', `${id}.json`);
   await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
 
   // Update index with progress info
-  await updateIndex();
+  await updateIndex(requirement.storageLocation || 'project');
 
   return requirement;
 }
@@ -413,12 +445,13 @@ async function advancePhase(id, forceAdvance = false) {
     requirement.updatedAt = now;
 
     // Save updated requirement (current phase completed)
-    const root = getRequirementsRoot();
+    const loc = requirement.storageLocation || 'project';
+    const root = getRequirementsRoot(loc);
     const reqPath = path.join(root, 'requirements', `${id}.json`);
     await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
 
     // Update index to reflect latest status and progress
-    await updateIndex();
+    await updateIndex(loc);
 
     return {
       requirement,
@@ -447,12 +480,13 @@ async function advancePhase(id, forceAdvance = false) {
   requirement.updatedAt = now;
 
   // Save updated requirement
-  const root = getRequirementsRoot();
+  const loc = requirement.storageLocation || 'project';
+  const root = getRequirementsRoot(loc);
   const reqPath = path.join(root, 'requirements', `${id}.json`);
   await fsPromises.writeFile(reqPath, JSON.stringify(requirement, null, 2));
 
   // Update index to reflect latest status and progress
-  await updateIndex();
+  await updateIndex(loc);
 
   return {
     requirement,
@@ -505,10 +539,11 @@ async function guessCurrentRequirement() {
 }
 
 /**
- * Update index from all requirement files
+ * Update index from all requirement files in the specified location
+ * @param {string} location - 'project' or 'user'
  */
-async function updateIndex() {
-  const root = getRequirementsRoot();
+async function updateIndex(location = 'project') {
+  const root = getRequirementsRoot(location);
   const reqDir = path.join(root, 'requirements');
   const indexPath = path.join(root, 'index.json');
 

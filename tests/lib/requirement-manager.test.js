@@ -217,8 +217,14 @@ function runTests() {
   // Test getRequirementsRoot
   console.log('\nRequirements Root:');
 
-  if (test('getRequirementsRoot returns path with .claude/requirements', () => {
+  if (test('getRequirementsRoot defaults to project-level (.requirements/)', () => {
     const root = rm.getRequirementsRoot();
+    expect(root).toContain('.requirements');
+  })) passed++;
+  else failed++;
+
+  if (test('getRequirementsRoot returns .claude path for user location', () => {
+    const root = rm.getRequirementsRoot('user');
     expect(root).toContain('.claude');
     expect(root).toContain('requirements');
   })) passed++;
