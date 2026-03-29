@@ -23,7 +23,6 @@ cp scripts/hooks/update-progress-hook.js "$HOME/.claude/scripts/hooks/"
 
 # 复制命令文件
 mkdir -p "$HOME/.claude/commands"
-cp commands/requirement-create.md "$HOME/.claude/commands/"
 cp commands/continue.md "$HOME/.claude/commands/"
 
 # 复制安装脚本到 ~/.claude/scripts/
